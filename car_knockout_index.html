@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080d18">
+<title>Car Knockout</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#080d18;--panel:#121b2c;--cyan:#40e0d0;--yellow:#ffd166;--muted:#8fa1bc}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#182b46 0,#080d18 55%);color:#f4f7ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+button{font:inherit;border:0;cursor:pointer;touch-action:manipulation}
+.app{max-width:520px;margin:auto;padding:16px 14px 24px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-weight:1000;font-size:22px;letter-spacing:1px}.logo span{color:var(--cyan)}.tag{font-size:10px;color:var(--cyan);letter-spacing:2px;font-weight:800}
+.coins{background:#202b3e;border:1px solid #35445c;border-radius:20px;padding:8px 12px;color:var(--yellow);font-weight:800}
+.panel{background:linear-gradient(145deg,#152238,#0e1625);border:1px solid #293951;border-radius:22px;padding:16px;margin-top:14px;box-shadow:0 12px 32px #0003}
+.eyebrow{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:800}.hero{font-size:27px;font-weight:1000;line-height:1.05;margin:8px 0}.sub{color:var(--muted);font-size:13px;line-height:1.45}
+.car-preview{height:150px;display:grid;place-items:center;position:relative;overflow:hidden;border-radius:16px;background:radial-gradient(ellipse,#304967 0,#142237 50%,#0b1320 80%);margin:14px 0}
+.car-preview:before{content:"";position:absolute;width:270px;height:65px;border:1px solid #4fe5d333;border-radius:50%;transform:rotate(-12deg)}
+.car-emoji{font-size:82px;filter:drop-shadow(0 12px 12px #0008);transform:rotate(-8deg)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#0a1220;border-radius:12px;padding:10px}.stat b{display:block;font-size:17px}.stat small{color:var(--muted);font-size:10px;letter-spacing:1px}
+.primary{width:100%;border-radius:14px;padding:14px;background:linear-gradient(90deg,#40e0d0,#a1ffcb);color:#07131b;font-weight:1000;margin-top:12px;box-shadow:0 5px 0 #209b93}
+.secondary{border:1px solid #35445c;background:#1a2940;color:#f4f7ff;border-radius:12px;padding:10px 12px;font-weight:800}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.garage{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.car-card{background:#0b1422;border:1px solid #2b3a51;border-radius:14px;padding:10px 6px;text-align:center;color:white}.car-card.selected{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}.car-card .emoji{font-size:30px}.car-card strong{display:block;font-size:11px;margin:4px 0}.car-card small{color:var(--muted);font-size:10px}
+.hidden{display:none!important}.game-wrap{margin-top:14px}.game-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900}
+canvas{display:block;width:100%;height:auto;aspect-ratio:360/500;background:#172b35;border:1px solid #3c5263;border-radius:18px;touch-action:none}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}.control{background:#1c2c42;border:1px solid #3b5069;border-radius:16px;padding:14px;color:white;font-size:22px;font-weight:900;user-select:none}.control:active{background:#31506b}.tip{text-align:center;color:var(--muted);font-size:11px;margin-top:9px}
+.result{position:absolute;inset:0;background:#07101de8;display:grid;place-items:center;text-align:center;padding:20px;border-radius:18px}.arena{position:relative}
+.footer{text-align:center;color:#60718a;font-size:10px;margin:18px 0 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div><div class="tag">ARCADE CAR BATTLE</div><div class="logo">CAR <span>KNOCKOUT</span></div></div>
+    <div class="coins">🪙 <span id="coins">0</span></div>
+  </header>
+
+  <section id="home" class="panel">
+    <div class="eyebrow">WELCOME, DRIVER</div>
+    <div class="hero">Own the arena.</div>
+    <div class="sub">Bump rivals out. Stay inside. Become the last car rolling.</div>
+    <div class="car-preview"><div class="car-emoji" id="preview">🏎️</div></div>
+    <div class="stats">
+      <div class="stat"><b id="statSpeed">7.5</b><small>SPEED</small></div>
+      <div class="stat"><b id="statPower">6.0</b><small>POWER</small></div>
+      <div class="stat"><b id="statGrip">7.0</b><small>GRIP</small></div>
+    </div>
+    <button class="primary" id="playBtn">▶ PLAY KNOCKOUT</button>
+    <div class="row" style="margin-top:18px"><strong>YOUR GARAGE</strong><span class="eyebrow">CHOOSE A CAR</span></div>
+    <div class="garage" id="garage"></div>
+    <div class="tip">Prototype v0.1 • Progress saves on this device</div>
+  </section>
+
+  <section id="game" class="game-wrap hidden">
+    <div class="game-head"><span>🏁 KNOCKOUT ARENA</span><span id="roundLabel">RIVALS: 4</span></div>
+    <div class="arena"><canvas id="arenaCanvas" width="360" height="500"></canvas></div>
+    <div class="controls">
+      <button class="control" id="leftBtn">↶ STEER LEFT</button>
+      <button class="control" id="rightBtn">STEER RIGHT ↷</button>
+    </div>
+    <div class="tip">Hold a button to turn. Your car moves forward automatically.</div>
+    <button class="secondary" id="exitBtn" style="width:100%;margin-top:10px">← Back to garage</button>
+  </section>
+  <div class="footer">CAR KNOCKOUT • DRIVE SMART • STAY IN THE ARENA</div>
+</div>
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#080d18');tg.setBackgroundColor('#080d18')}catch(e){}}
+const cars=[
+ {name:'Street Fox',emoji:'🏎️',price:0,speed:7.5,power:6,grip:7,color:'#40e0d0'},
+ {name:'Turbo Bolt',emoji:'🚙',price:120,speed:9,power:7,grip:6,color:'#ffd166'},
+ {name:'Night Beast',emoji:'🏎️',price:260,speed:7,power:10,grip:7,color:'#ff668a'},
+ {name:'Ice Runner',emoji:'🚕',price:420,speed:8,power:7,grip:10,color:'#8db8ff'},
+ {name:'Rally King',emoji:'🚗',price:650,speed:9,power:9,grip:8,color:'#c4ff70'},
+ {name:'Neon X',emoji:'🚘',price:900,speed:10,power:10,grip:9,color:'#c49aff'}
+];
+let save={coins:0,owned:[0],selected:0,best:0};
+try{save={...save,...JSON.parse(localStorage.getItem('ck-save')||'{}')}}catch(e){}
+function persist(){localStorage.setItem('ck-save',JSON.stringify(save));render()}
+function render(){
+ document.getElementById('coins').textContent=save.coins;
+ document.getElementById('preview').textContent=cars[save.selected].emoji;
+ ['Speed','Power','Grip'].forEach((s,i)=>document.getElementById('stat'+s).textContent=[cars[save.selected].speed,cars[save.selected].power,cars[save.selected].grip][i].toFixed(1));
+ const g=document.getElementById('garage');g.innerHTML='';
+ cars.forEach((c,i)=>{const owned=save.owned.includes(i);const b=document.createElement('button');b.className='car-card '+(save.selected===i?'selected':'');
+ b.innerHTML=`<div class="emoji">${c.emoji}</div><strong>${c.name}</strong><small>${owned?'OWNED':`🪙 ${c.price}`}</small>`;
+ b.onclick=()=>{if(owned){save.selected=i;persist()}else if(save.coins>=c.price){save.coins-=c.price;save.owned.push(i);save.selected=i;persist()}else{b.animate([{transform:'translateX(0)'},{transform:'translateX(-3px)'},{transform:'translateX(3px)'},{transform:'translateX(0)'}],{duration:180})}};
+ g.appendChild(b)});
+}
+render();
+const home=document.getElementById('home'),game=document.getElementById('game'),canvas=document.getElementById('arenaCanvas'),ctx=canvas.getContext('2d');
+let running=false,raf=0,turn=0,player=null,bots=[],last=0,roundCoins=0,arenaTime=0;
+const W=360,H=500,cx=180,cy=250,rx=151,ry=215;
+function spawn(){return {x:cx+(Math.random()-.5)*180,y:cy+(Math.random()-.5)*270,a:Math.random()*6.28,r:14,hp:3,alive:true,speed:0.8+Math.random()*.6,bot:true,flash:0}}
+function startGame(){
+ home.classList.add('hidden');game.classList.remove('hidden');running=true;turn=0;roundCoins=0;arenaTime=0;
+ player={x:cx,y:cy+100,a:-Math.PI/2,r:15,hp:3,alive:true,flash:0,bot:false};
+ bots=Array.from({length:4},spawn);last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
+}
+function finish(win){
+ if(!running)return;running=false;cancelAnimationFrame(raf);
+ const alive=bots.filter(b=>b.alive).length;const reward=Math.max(10,roundCoins+(win?100:alive===0?50:20));
+ save.coins+=reward;if(win)save.best=Math.max(save.best,1);persist();
+ const overlay=document.createElement('div');overlay.className='result';
+ overlay.innerHTML=`<div><div style="font-size:48px">${win?'🏆':'💥'}</div><h2>${win?'ARENA CHAMPION!':'RACE OVER'}</h2><p>${win?'All rivals knocked out.':`Rivals remaining: ${alive}`}</p><p style="color:#ffd166;font-weight:900">+${reward} coins</p><button class="primary" id="againBtn">PLAY AGAIN</button><button class="secondary" id="garageBtn" style="width:100%;margin-top:10px">GARAGE</button></div>`;
+ game.querySelector('.arena').appendChild(overlay);
+ overlay.querySelector('#againBtn').onclick=()=>{overlay.remove();startGame()};
+ overlay.querySelector('#garageBtn').onclick=()=>{overlay.remove();game.classList.add('hidden');home.classList.remove('hidden');render()};
+}
+function drawCar(c,isPlayer=false){
+ ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);
+ ctx.fillStyle='#0006';ctx.beginPath();ctx.ellipse(2,5,17,11,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#121722';ctx.fillRect(-11,-13,7,8);ctx.fillRect(5,-13,7,8);ctx.fillRect(-11,6,7,8);ctx.fillRect(5,6,7,8);
+ ctx.fillStyle=isPlayer?cars[save.selected].color:['#ff668a','#ffd166','#8db8ff','#c49aff'][bots.indexOf(c)%4]||'#ff668a';
+ ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(11,-7);ctx.lineTo(10,11);ctx.lineTo(5,15);ctx.lineTo(-5,15);ctx.lineTo(-10,11);ctx.lineTo(-11,-7);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#aeeaff';ctx.beginPath();ctx.moveTo(-7,-5);ctx.lineTo(7,-5);ctx.lineTo(6,2);ctx.lineTo(-6,2);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#fff7c2';ctx.fillRect(-8,-14,4,3);ctx.fillRect(4,-14,4,3);
+ if(c.flash>0){ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke()}
+ ctx.restore();
+}
+function loop(now){
+ if(!running)return;const dt=Math.min((now-last)/16.67,2);last=now;arenaTime+=dt;
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#193a3c';ctx.fillRect(0,0,W,H);
+ // arena rings
+ ctx.strokeStyle='#4c7770';ctx.lineWidth=3;ctx.setLineDash([10,9]);ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle='#7f9d89';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(cx,cy,rx-18,ry-18,0,0,Math.PI*2);ctx.stroke();
+ // center marking
+ ctx.strokeStyle='#ffffff20';ctx.beginPath();ctx.arc(cx,cy,52,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffffff12';ctx.fillRect(cx-3,cy-70,6,140);
+ if(player.alive){
+  player.a+=turn*0.055*dt;
+  player.x+=Math.cos(player.a)*cars[save.selected].speed*0.48*dt;
+  player.y+=Math.sin(player.a)*cars[save.selected].speed*0.48*dt;
+  if(player.flash>0)player.flash-=dt;
+  const dx=(player.x-cx)/rx,dy=(player.y-cy)/ry;
+  if(dx*dx+dy*dy>0.88){player.hp--;player.flash=10;player.x=cx+dx*rx*.91;player.y=cy+dy*ry*.91;if(player.hp<=0){player.alive=false}}
+ }
+ bots.forEach(b=>{
+  if(!b.alive)return;
+  const target=player.alive?player:{x:cx,y:cy};
+  const desired=Math.atan2(target.y-b.y,target.x-b.x);
+  let diff=((desired-b.a+Math.PI*3)%(Math.PI*2))-Math.PI;
+  b.a+=Math.max(-0.045,Math.min(0.045,diff))*dt;
+  b.x+=Math.cos(b.a)*b.speed*dt;b.y+=Math.sin(b.a)*b.speed*dt;
+  if(b.flash>0)b.flash-=dt;
+  const dx=(b.x-cx)/rx,dy=(b.y-cy)/ry;
+  if(dx*dx+dy*dy>0.94){b.hp--;b.flash=10;b.a+=Math.PI*.65;b.x=cx+dx*rx*.88;b.y=cy+dy*ry*.88;if(b.hp<=0){b.alive=false;roundCoins+=25}}
+ });
+ // collisions
+ const all=[...(player.alive?[player]:[]),...bots.filter(b=>b.alive)];
+ for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){
+  const a=all[i],b=all[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+  if(d<28&&d>0){const nx=dx/d,ny=dy/d,over=(28-d)/2;a.x-=nx*over;b.x+=nx*over;a.y-=ny*over;b.y+=ny*over;
+   if(a.bot!==b.bot){const victim=a.bot?b:a;victim.hp--;victim.flash=8;const hitter=a.bot?a:b;hitter.x+=nx*(a===hitter?1:-1)*5;hitter.y+=ny*(a===hitter?1:-1)*5;if(victim.hp<=0){victim.alive=false;if(victim===player){}else roundCoins+=25}}
+  }
+ }
+ all.forEach(c=>drawCar(c,c===player));
+ const alive=bots.filter(b=>b.alive).length;
+ document.getElementById('roundLabel').textContent='RIVALS: '+alive+' • HP: '+(player.alive?player.hp:0);
+ if(!player.alive){finish(false);return}
+ if(alive===0){finish(true);return}
+ raf=requestAnimationFrame(loop);
+}
+function bindTurn(id,val){const el=document.getElementById(id);const down=e=>{e.preventDefault();turn=val};const up=e=>{e.preventDefault();if(turn===val)turn=0};el.addEventListener('pointerdown',down);['pointerup','pointercancel','pointerleave'].forEach(ev=>el.addEventListener(ev,up))}
+bindTurn('leftBtn',-1);bindTurn('rightBtn',1);
+document.getElementById('playBtn').onclick=startGame;
+document.getElementById('exitBtn').onclick=()=>{running=false;cancelAnimationFrame(raf);game.classList.add('hidden');home.classList.remove('hidden');render()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&running){running=false;cancelAnimationFrame(raf)}});
+</script>
+</body>
+</html>
